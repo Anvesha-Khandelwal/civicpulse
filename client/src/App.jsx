@@ -1,3 +1,4 @@
+// App.jsx
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import Navbar from './components/Navbar';
@@ -7,11 +8,13 @@ import ReportPage from './pages/Report/ReportPage';
 import MyIssuesPage from './pages/MyIssues/MyIssuesPage';
 import AdminDashboard from './pages/AdminDashboard/AdminDashboard';
 
+// Only logged-in users (citizen or authority)
 const ProtectedRoute = ({ children }) => {
   const { user } = useAuth();
   return user ? children : <Navigate to="/login" />;
 };
 
+// Only authority/admin users
 const AuthorityRoute = ({ children }) => {
   const { user, isAuthority } = useAuth();
   if (!user) return <Navigate to="/login" />;
@@ -26,20 +29,26 @@ const AppRoutes = () => {
     <>
       {user && <Navbar />}
       <Routes>
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/explore" element={
-          <ProtectedRoute><ExplorePage /></ProtectedRoute>
-        } />
+        {/* Public routes — no login needed */}
+        <Route path="/"        element={<Navigate to="/explore" />} />
+        <Route path="/login"   element={<LoginPage />} />
+        <Route path="/explore" element={<ExplorePage />} />
+
+        {/* Citizen protected routes */}
         <Route path="/report" element={
           <ProtectedRoute><ReportPage /></ProtectedRoute>
         } />
         <Route path="/my-issues" element={
           <ProtectedRoute><MyIssuesPage /></ProtectedRoute>
         } />
+
+        {/* Authority only */}
         <Route path="/admin" element={
           <AuthorityRoute><AdminDashboard /></AuthorityRoute>
         } />
-        <Route path="*" element={<Navigate to={user ? "/explore" : "/login"} />} />
+
+        {/* Fallback */}
+        <Route path="*" element={<Navigate to="/explore" />} />
       </Routes>
     </>
   );

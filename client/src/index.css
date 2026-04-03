@@ -1,3 +1,9 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Force light base */
+body {
+  background-color: #dae0e6;
+  color: #1c1c1c;
+}
