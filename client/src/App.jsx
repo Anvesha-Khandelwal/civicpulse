@@ -2,7 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import Navbar from './components/Navbar';
 import LoginPage from './pages/Login/LoginPage';
-import ExplorePage from './pages/Explore/ExplorePage';
+import ExplorePage from './pages/ExplorePage';
 import ReportPage from './pages/Report/ReportPage';
 import MyIssuesPage from './pages/MyIssues/MyIssuesPage';
 import AdminDashboard from './pages/AdminDashboard/AdminDashboard';

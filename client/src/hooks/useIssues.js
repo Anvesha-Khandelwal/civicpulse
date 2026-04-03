@@ -1,116 +1,64 @@
-// hooks/useIssues.js
-import { useState, useEffect, useCallback } from 'react';
-import { fetchIssues, voteOnIssue } from '../services/api';
+import { useState, useEffect } from 'react';
 
-const DEFAULT_FILTERS = {
-  category: 'all',
-  status: 'all',
-  sortBy: 'newest',      // 'newest' | 'upvotes' | 'nearby'
-  locality: '',          // address string for geo filter
-  radius: 5,             // km
-};
+const MOCK_ISSUES = [
+  { _id: '1', title: 'Large pothole on MG Road', description: 'Deep pothole causing accidents near the signal', category: 'pothole', status: 'open', upvotes: 34, downvotes: 2, ward: 'Ward 42', city: 'Bengaluru', lat: 12.9716, lng: 77.5946, createdAt: new Date(Date.now() - 86400000).toISOString(), reportedBy: { name: 'Arjun S' }, media: [] },
+  { _id: '2', title: 'Broken streetlight near park', description: 'Street has been dark for 2 weeks, very unsafe at night', category: 'streetlight', status: 'in-progress', upvotes: 21, downvotes: 1, ward: 'Ward 10', city: 'Bengaluru', lat: 12.9352, lng: 77.6245, createdAt: new Date(Date.now() - 172800000).toISOString(), reportedBy: { name: 'Priya N' }, media: [] },
+  { _id: '3', title: 'Garbage pile near bus stop', description: 'Uncollected garbage for over a week, terrible smell', category: 'garbage', status: 'open', upvotes: 58, downvotes: 3, ward: 'Ward 42', city: 'Bengaluru', lat: 12.9816, lng: 77.6041, createdAt: new Date(Date.now() - 259200000).toISOString(), reportedBy: { name: 'Rahul M' }, media: [] },
+  { _id: '4', title: 'Waterlogging after rain', description: 'Road completely flooded, vehicles getting stuck', category: 'waterlogging', status: 'resolved', upvotes: 44, downvotes: 0, ward: 'Ward 15', city: 'Bengaluru', lat: 12.9616, lng: 77.5846, createdAt: new Date(Date.now() - 345600000).toISOString(), reportedBy: { name: 'Sneha K' }, media: [] },
+  { _id: '5', title: 'Fallen tree blocking road', description: 'Tree fell during storm, one lane completely blocked', category: 'fallen_tree', status: 'in-progress', upvotes: 19, downvotes: 1, ward: 'Ward 10', city: 'Bengaluru', lat: 12.9516, lng: 77.6146, createdAt: new Date(Date.now() - 432000000).toISOString(), reportedBy: { name: 'Kiran P' }, media: [] },
+  { _id: '6', title: 'Stray dogs near school', description: 'Pack of aggressive stray dogs near the school gate', category: 'stray_animals', status: 'open', upvotes: 27, downvotes: 5, ward: 'Ward 42', city: 'Bengaluru', lat: 12.9416, lng: 77.5746, createdAt: new Date(Date.now() - 518400000).toISOString(), reportedBy: { name: 'Meera R' }, media: [] },
+];
 
-const useIssues = (externalFilters = {}) => {
-  const [issues, setIssues]     = useState([]);
-  const [loading, setLoading]   = useState(true);
-  const [error, setError]       = useState(null);
-  const [filters, setFilters]   = useState({ ...DEFAULT_FILTERS, ...externalFilters });
-  const [userLocation, setUserLocation] = useState(null);
+const useIssues = () => {
+  const [issues, setIssues] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [filters, setFilters] = useState({
+    search: '',
+    category: '',
+    status: '',
+    sortBy: 'upvotes',
+    ward: '',
+  });
 
-  // Get user's browser location once
   useEffect(() => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-        () => setUserLocation(null)
-      );
-    }
-  }, []);
+    setLoading(true);
+    setTimeout(() => {
+      let filtered = [...MOCK_ISSUES];
+      if (filters.search)
+        filtered = filtered.filter(i =>
+          i.title.toLowerCase().includes(filters.search.toLowerCase()) ||
+          i.description.toLowerCase().includes(filters.search.toLowerCase())
+        );
+      if (filters.category)
+        filtered = filtered.filter(i => i.category === filters.category);
+      if (filters.status)
+        filtered = filtered.filter(i => i.status === filters.status);
+      if (filters.ward)
+        filtered = filtered.filter(i => i.ward === filters.ward);
+      if (filters.sortBy === 'upvotes')
+        filtered.sort((a, b) => b.upvotes - a.upvotes);
+      else if (filters.sortBy === 'newest')
+        filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      setIssues(filtered);
+      setLoading(false);
+    }, 800);
+  }, [filters]);
 
-  // Fetch whenever filters change
-  useEffect(() => {
-    const controller = new AbortController();
-    const load = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const params = {
-          category: filters.category !== 'all' ? filters.category : undefined,
-          status:   filters.status   !== 'all' ? filters.status   : undefined,
-          sortBy:   filters.sortBy,
-          locality: filters.locality || undefined,
-          radius:   filters.radius,
-          lat:      userLocation?.lat,
-          lng:      userLocation?.lng,
-        };
-        const data = await fetchIssues(params, controller.signal);
-        setIssues(data);
-      } catch (err) {
-        if (err.name !== 'AbortError') setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-    load();
-    return () => controller.abort();
-  }, [filters, userLocation]);
+  const updateFilters = (newFilters) => setFilters(prev => ({ ...prev, ...newFilters }));
+  const resetFilters = () => setFilters({ search: '', category: '', status: '', sortBy: 'upvotes', ward: '' });
 
-  // Optimistic vote update
-  const handleVote = useCallback(async (issueId, type, userId) => {
-    setIssues((prev) =>
-      prev.map((issue) => {
-        if (issue._id !== issueId) return issue;
-        const upvotes   = [...issue.upvotes];
-        const downvotes = [...issue.downvotes];
-        const inUp   = upvotes.includes(userId);
-        const inDown = downvotes.includes(userId);
-
-        if (type === 'up') {
-          if (inUp) {
-            upvotes.splice(upvotes.indexOf(userId), 1);      // toggle off
-          } else {
-            upvotes.push(userId);
-            if (inDown) downvotes.splice(downvotes.indexOf(userId), 1);
-          }
-        } else {
-          if (inDown) {
-            downvotes.splice(downvotes.indexOf(userId), 1);  // toggle off
-          } else {
-            downvotes.push(userId);
-            if (inUp) upvotes.splice(upvotes.indexOf(userId), 1);
-          }
-        }
-        return { ...issue, upvotes, downvotes };
-      })
+  const handleVote = (issueId, type) => {
+    setIssues(prev =>
+      prev.map(issue =>
+        issue._id === issueId
+          ? { ...issue, upvotes: type === 'up' ? issue.upvotes + 1 : issue.upvotes, downvotes: type === 'down' ? issue.downvotes + 1 : issue.downvotes }
+          : issue
+      )
     );
-
-    try {
-      await voteOnIssue(issueId, type);
-    } catch {
-      // revert on failure — re-fetch
-      const data = await fetchIssues({});
-      setIssues(data);
-    }
-  }, []);
-
-  const updateFilters = useCallback((patch) => {
-    setFilters((prev) => ({ ...prev, ...patch }));
-  }, []);
-
-  const resetFilters = useCallback(() => {
-    setFilters(DEFAULT_FILTERS);
-  }, []);
-
-  return {
-    issues,
-    loading,
-    error,
-    filters,
-    userLocation,
-    updateFilters,
-    resetFilters,
-    handleVote,
   };
+
+  return { issues, loading, error, filters, updateFilters, resetFilters, handleVote };
 };
 
 export default useIssues;
