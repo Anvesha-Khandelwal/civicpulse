@@ -1,12 +1,27 @@
-// User DB queries will go here
-const pool = require('../config/db');
+const mongoose = require('mongoose');
+const bcrypt   = require('bcryptjs');
 
-const createUser = async (name, email, phone, role, ward, city) => {
-  // INSERT INTO users ...
+const userSchema = new mongoose.Schema({
+  name:           { type: String, required: true, trim: true },
+  email:          { type: String, required: true, unique: true, lowercase: true },
+  password:       { type: String, required: true, minlength: 6 },
+  role:           { type: String, enum: ['citizen', 'authority'], default: 'citizen' },
+  // Authority-only fields
+  departmentName: { type: String },
+  departmentId:   { type: String },
+  // Citizen fields
+  reputationScore:{ type: Number, default: 0 },
+}, { timestamps: true });
+
+// Hash password before save
+userSchema.pre('save', async function (next) {
+  if (!this.isModified('password')) return next();
+  this.password = await bcrypt.hash(this.password, 10);
+  next();
+});
+
+userSchema.methods.matchPassword = async function (entered) {
+  return bcrypt.compare(entered, this.password);
 };
 
-const findUserByEmail = async (email) => {
-  // SELECT * FROM users WHERE email = ...
-};
-
-module.exports = { createUser, findUserByEmail };
+module.exports = mongoose.model('User', userSchema);
