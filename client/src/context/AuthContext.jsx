@@ -16,13 +16,19 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const savedUser = localStorage.getItem('civicpulse_user');
-    const savedToken = localStorage.getItem('civicpulse_token');
-    if (savedUser && savedToken) {
-      setUser(JSON.parse(savedUser));
-      setToken(savedToken);
+    try {
+      const savedUser = localStorage.getItem('civicpulse_user');
+      const savedToken = localStorage.getItem('civicpulse_token');
+      if (savedUser && savedToken) {
+        setUser(JSON.parse(savedUser));
+        setToken(savedToken);
+      }
+    } catch (e) {
+      localStorage.removeItem('civicpulse_user');
+      localStorage.removeItem('civicpulse_token');
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }, []);
 
   const login = (userData, authToken) => {
@@ -31,6 +37,20 @@ export const AuthProvider = ({ children }) => {
     localStorage.setItem('civicpulse_user', JSON.stringify(userData));
     localStorage.setItem('civicpulse_token', authToken);
   };
+  const ProtectedRoute = ({ children }) => {
+  const { user } = useAuth();
+  const savedUser = localStorage.getItem('civicpulse_user');
+  return (user || savedUser) ? children : <Navigate to="/login" />;
+};
+
+const AuthorityRoute = ({ children }) => {
+  const { user, isAuthority } = useAuth();
+  const savedUser = localStorage.getItem('civicpulse_user');
+  const parsedUser = savedUser ? JSON.parse(savedUser) : null;
+  if (!user && !parsedUser) return <Navigate to="/login" />;
+  if (parsedUser?.role !== 'authority' && !isAuthority()) return <Navigate to="/explore" />;
+  return children;
+};
 
   const logout = () => {
     setUser(null);
@@ -42,9 +62,17 @@ export const AuthProvider = ({ children }) => {
   const isAuthority = () => user?.role === 'authority';
   const isCitizen = () => user?.role === 'citizen';
 
+  if (loading) {
+    return (
+      <div style={{ minHeight: '100vh', background: '#080C14', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ color: '#3b82f6', fontSize: 14 }}>Loading...</div>
+      </div>
+    );
+  }
+
   return (
     <AuthContext.Provider value={{ user, token, loading, login, logout, isAuthority, isCitizen }}>
-      {!loading && children}
+      {children}
     </AuthContext.Provider>
   );
 };

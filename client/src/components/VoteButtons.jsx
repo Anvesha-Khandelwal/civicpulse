@@ -4,17 +4,21 @@ import { AuthContext } from '../context/AuthContext';
 
 const VoteButtons = ({ issue, onVote, compact = false }) => {
   const { user } = useContext(AuthContext);
-  const [animating, setAnimating] = useState(null); // 'up' | 'down'
+  const [animating, setAnimating] = useState(null);
 
-  const hasUpvoted   = user && issue.upvotes?.includes(user._id);
-  const hasDownvoted = user && issue.downvotes?.includes(user._id);
-  const score = (issue.upvotes?.length || 0) - (issue.downvotes?.length || 0);
+  const userId = user?.id;
+
+  const upvoteCount   = Array.isArray(issue.upvotes)   ? issue.upvotes.length   : (issue.upvotes   || 0);
+  const downvoteCount = Array.isArray(issue.downvotes)  ? issue.downvotes.length  : (issue.downvotes  || 0);
+  const hasUpvoted    = Array.isArray(issue.upvotes)    ? issue.upvotes.includes(userId)   : false;
+  const hasDownvoted  = Array.isArray(issue.downvotes)  ? issue.downvotes.includes(userId) : false;
+  const score         = upvoteCount - downvoteCount;
 
   const trigger = async (type) => {
     if (!user) return;
     setAnimating(type);
     setTimeout(() => setAnimating(null), 400);
-    onVote(issue._id, type, user._id);
+    onVote(issue._id, type, user.id);
   };
 
   const btnBase = `
@@ -44,7 +48,7 @@ const VoteButtons = ({ issue, onVote, compact = false }) => {
         title={user ? 'Upvote' : 'Login to vote'}
       >
         <span style={{ fontSize: compact ? 14 : 16 }}>▲</span>
-        <span>{issue.upvotes?.length || 0}</span>
+        <span>{upvoteCount}</span>
       </button>
 
       {/* Score pill */}
@@ -61,7 +65,7 @@ const VoteButtons = ({ issue, onVote, compact = false }) => {
         title={user ? 'Downvote' : 'Login to vote'}
       >
         <span style={{ fontSize: compact ? 14 : 16 }}>▼</span>
-        <span>{issue.downvotes?.length || 0}</span>
+        <span>{downvoteCount}</span>
       </button>
 
       {!user && (

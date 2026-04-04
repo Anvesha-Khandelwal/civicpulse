@@ -1,4 +1,3 @@
-// App.jsx
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import Navbar from './components/Navbar';
@@ -8,47 +7,47 @@ import ReportPage from './pages/Report/ReportPage';
 import MyIssuesPage from './pages/MyIssues/MyIssuesPage';
 import AdminDashboard from './pages/AdminDashboard/AdminDashboard';
 
-// Only logged-in users (citizen or authority)
 const ProtectedRoute = ({ children }) => {
-  const { user } = useAuth();
-  return user ? children : <Navigate to="/login" />;
+  const { user, loading } = useAuth();
+  if (loading) return null;
+  return user ? children : <Navigate to="/login" replace />;
 };
 
-// Only authority/admin users
 const AuthorityRoute = ({ children }) => {
-  const { user, isAuthority } = useAuth();
-  if (!user) return <Navigate to="/login" />;
-  if (!isAuthority()) return <Navigate to="/explore" />;
+  const { user, loading, isAuthority } = useAuth();
+  if (loading) return null;
+  if (!user) return <Navigate to="/login" replace />;
+  if (!isAuthority()) return <Navigate to="/explore" replace />;
   return children;
 };
 
 const AppRoutes = () => {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
+  if (loading) return null;
 
   return (
     <>
       {user && <Navbar />}
       <Routes>
-        {/* Public routes — no login needed */}
-        <Route path="/"        element={<Navigate to="/explore" />} />
-        <Route path="/login"   element={<LoginPage />} />
-        <Route path="/explore" element={<ExplorePage />} />
-
-        {/* Citizen protected routes */}
+        <Route path="/" element={<Navigate to="/explore" />} />
+        <Route path="/login" element={
+          user ? <Navigate to="/explore" replace /> : <LoginPage />
+        } />
+        <Route path="/explore" element={
+          <ProtectedRoute><ExplorePage /></ProtectedRoute>
+        } />
         <Route path="/report" element={
           <ProtectedRoute><ReportPage /></ProtectedRoute>
         } />
         <Route path="/my-issues" element={
           <ProtectedRoute><MyIssuesPage /></ProtectedRoute>
         } />
-
-        {/* Authority only */}
         <Route path="/admin" element={
           <AuthorityRoute><AdminDashboard /></AuthorityRoute>
         } />
-
-        {/* Fallback */}
-        <Route path="*" element={<Navigate to="/explore" />} />
+        <Route path="*" element={
+          <Navigate to={user ? "/explore" : "/login"} replace />
+        } />
       </Routes>
     </>
   );
