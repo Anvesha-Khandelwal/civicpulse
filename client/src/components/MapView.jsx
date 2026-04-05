@@ -63,48 +63,60 @@ const FitBounds = ({ issues }) => {
   return null;
 };
 
-const MapView = ({ issues, onIssueClick, showHeatmap = false }) => (
-  <div className="relative w-full rounded-2xl overflow-hidden border border-slate-200" style={{ height: '520px' }}>
-    <MapContainer
-      center={[12.9716, 77.5946]}
-      zoom={12}
-      style={{ height: '100%', width: '100%' }}
-      zoomControl={false}
-    >
-      {/* ── Light OSM tiles ── */}
-      <TileLayer
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-        maxZoom={19}
-      />
+const MapView = ({ issues, onIssueClick, showHeatmap = false }) => {
+  // Default center: India
+  const defaultCenter = [20.5937, 78.9629];
 
-      <FitBounds issues={issues} />
-      {showHeatmap && <HeatmapLayer issues={issues} />}
+  return (
+    <div className="relative w-full rounded-2xl overflow-hidden border border-white/10" style={{ height: '520px' }}>
+      <MapContainer
+        center={defaultCenter}
+        zoom={5}
+        style={{ height: '100%', width: '100%', background: '#0D1117' }}
+        zoomControl={false}
+      >
+        {/* Dark map tiles */}
+        <TileLayer
+          url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
 
-      {!showHeatmap && issues.map(issue => {
-        if (!issue.location?.lat || !issue.location?.lng) return null;
-        const color = STATUS_COLORS[issue.status] || STATUS_COLORS.open;
-        const emoji = CATEGORY_ICONS[issue.category] || '⚠️';
-        return (
-          <Marker
-            key={issue._id}
-            position={[issue.location.lat, issue.location.lng]}
-            icon={createMarker(color, emoji)}
-            eventHandlers={{ click: () => onIssueClick(issue) }}
-          >
-            <Popup>
-              <div
-                style={{ borderRadius: 10, padding: 10, minWidth: 190, cursor: 'pointer' }}
-                onClick={() => onIssueClick(issue)}
-              >
-                <p style={{ fontWeight: 700, fontSize: 13, marginBottom: 4, color: '#1e293b' }}>{issue.title}</p>
-                <p style={{ fontSize: 11, color: '#64748b', marginBottom: 8 }}>{issue.location?.address}</p>
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                  <span style={{ fontSize: 11, color: '#10b981' }}>▲ {issue.upvotes || 0}</span>
-                  <span style={{ fontSize: 11, color: '#ef4444' }}>▼ {issue.downvotes || 0}</span>
-                  <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 99, background: color + '22', color, border: `1px solid ${color}55` }}>
-                    {issue.status}
-                  </span>
+          attribution='&copy; <a href="https://carto.com/">CARTO</a>'
+          subdomains="abcd"
+          maxZoom={19}
+        />
+
+        <FitBounds issues={issues} />
+        {showHeatmap && <HeatmapLayer issues={issues} />}
+
+        {/* Issue markers */}
+        {!showHeatmap && issues.map((issue) => {
+          if (!issue.location?.lat || !issue.location?.lng) return null;
+          const color = STATUS_COLORS[issue.status] || STATUS_COLORS.open;
+          const emoji = CATEGORY_ICONS[issue.category] || '⚠️';
+          return (
+            <Marker
+              key={issue._id}
+              position={[issue.location.lat, issue.location.lng]}
+              icon={createMarker(color, emoji)}
+              eventHandlers={{ click: () => onIssueClick(issue) }}
+            >
+              <Popup className="civic-popup">
+                <div
+                  style={{ background: '#111827', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, padding: 12, minWidth: 200, color: '#e2e8f0' }}
+                  onClick={() => onIssueClick(issue)}
+                  className="cursor-pointer"
+                >
+                  <p style={{ fontWeight: 700, fontSize: 13, marginBottom: 4 }}>{issue.title}</p>
+                  <p style={{ fontSize: 11, color: '#94a3b8', marginBottom: 8 }}>{issue.location.address}</p>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <span style={{ fontSize: 11, color: '#10b981' }}>▲ {issue.upvotes?.length || 0}</span>
+                    <span style={{ fontSize: 11, color: '#ef4444' }}>▼ {issue.downvotes?.length || 0}</span>
+                    <span style={{
+                      fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 99,
+                      background: color + '22', color, border: `1px solid ${color}55`,
+                    }}>
+                      {issue.status}
+                    </span>
+                  </div>
                 </div>
               </div>
             </Popup>

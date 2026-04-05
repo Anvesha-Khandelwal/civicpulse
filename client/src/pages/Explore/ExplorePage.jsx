@@ -1,10 +1,12 @@
 // pages/ExplorePage.jsx
-import { useState } from 'react';
-import useIssues from '../hooks/useIssues';
-import IssueCard from '../components/IssueCard';
-import IssueDetailModal from '../components/IssueDetailModal';
-import FilterBar from '../components/FilterBar';
-import MapView from '../components/MapView';
+// Add to index.html <head>:
+// <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+import { useState, useContext } from 'react';
+import useIssues from '../../hooks/useIssues';
+import { AuthContext } from '../../context/AuthContext';
+import IssueDetailModal from '../../components/IssueDetailModal';
+import MapView from '../../components/MapView';
 
 const TABS = [
   { id: 'feed', label: 'Feed',    icon: '▦'  },

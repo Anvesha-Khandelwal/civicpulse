@@ -2,7 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import Navbar from './components/Navbar';
 import LoginPage from './pages/Login/LoginPage';
-import ExplorePage from './pages/ExplorePage';
+import ExplorePage from './pages/Explore/ExplorePage';
 import ReportPage from './pages/Report/ReportPage';
 import MyIssuesPage from './pages/MyIssues/MyIssuesPage';
 import AdminDashboard from './pages/AdminDashboard/AdminDashboard';
@@ -29,25 +29,13 @@ const AppRoutes = () => {
     <>
       {user && <Navbar />}
       <Routes>
-        <Route path="/" element={<Navigate to="/explore" />} />
-        <Route path="/login" element={
-          user ? <Navigate to="/explore" replace /> : <LoginPage />
-        } />
-        <Route path="/explore" element={
-          <ProtectedRoute><ExplorePage /></ProtectedRoute>
-        } />
-        <Route path="/report" element={
-          <ProtectedRoute><ReportPage /></ProtectedRoute>
-        } />
-        <Route path="/my-issues" element={
-          <ProtectedRoute><MyIssuesPage /></ProtectedRoute>
-        } />
-        <Route path="/admin" element={
-          <AuthorityRoute><AdminDashboard /></AuthorityRoute>
-        } />
-        <Route path="*" element={
-          <Navigate to={user ? "/explore" : "/login"} replace />
-        } />
+        <Route path="/"        element={<Navigate to="/explore" replace />} />
+        <Route path="/login"   element={user ? <Navigate to="/explore" replace /> : <LoginPage />} />
+        <Route path="/explore" element={<ProtectedRoute><ExplorePage /></ProtectedRoute>} />
+        <Route path="/report"  element={<ProtectedRoute><ReportPage /></ProtectedRoute>} />
+        <Route path="/my-issues" element={<ProtectedRoute><MyIssuesPage /></ProtectedRoute>} />
+        <Route path="/admin"   element={<AuthorityRoute><AdminDashboard /></AuthorityRoute>} />
+        <Route path="*"        element={<Navigate to={user ? '/explore' : '/login'} replace />} />
       </Routes>
     </>
   );

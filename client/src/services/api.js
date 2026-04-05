@@ -1,9 +1,7 @@
 // services/api.js
-// ⚠️ MOCK VERSION — replace BASE_URL and remove mock data once backend is ready
+const BASE_URL = 'http://localhost:5000/api';
 
-const BASE_URL = 'http://localhost:5000/api'; // change when backend is live
-
-// ── MOCK DATA ──────────────────────────────────────────────────────────────
+// ── MOCK DATA ────────────────────────────────────────────────────────────────
 const MOCK_ISSUES = [
   {
     _id: '1', title: 'Large pothole on MG Road near Ulsoor',
@@ -13,7 +11,7 @@ const MOCK_ISSUES = [
     mediaUrls: ['https://picsum.photos/seed/pot1/600/400'],
     upvotes: ['u1','u2','u3','u4','u5'], downvotes: ['u6'],
     createdAt: new Date(Date.now() - 2 * 3600000).toISOString(),
-    assignedDepartment: 'BBMP Roads', adminNote: null,
+    assignedDepartment: 'BBMP Roads', adminNote: null, flagged: false,
   },
   {
     _id: '2', title: 'Street light broken for 2 weeks — Koramangala 5th Block',
@@ -23,7 +21,7 @@ const MOCK_ISSUES = [
     mediaUrls: ['https://picsum.photos/seed/light2/600/400'],
     upvotes: ['u1','u2','u7'], downvotes: [],
     createdAt: new Date(Date.now() - 14 * 86400000).toISOString(),
-    assignedDepartment: 'BESCOM', adminNote: 'Technician visit scheduled for Thursday.',
+    assignedDepartment: 'BESCOM', adminNote: 'Technician visit scheduled for Thursday.', flagged: false,
   },
   {
     _id: '3', title: 'Garbage pile not collected — Indiranagar 100ft road',
@@ -33,7 +31,7 @@ const MOCK_ISSUES = [
     mediaUrls: ['https://picsum.photos/seed/garb3/600/400'],
     upvotes: ['u3','u8','u9','u10','u11','u12'], downvotes: ['u1','u2'],
     createdAt: new Date(Date.now() - 5 * 86400000).toISOString(),
-    assignedDepartment: 'BBMP Sanitation', adminNote: null,
+    assignedDepartment: 'BBMP Sanitation', adminNote: null, flagged: true,
   },
   {
     _id: '4', title: 'Water pipe burst — HSR Layout Sector 2',
@@ -43,7 +41,7 @@ const MOCK_ISSUES = [
     mediaUrls: ['https://picsum.photos/seed/water4/600/400'],
     upvotes: ['u1','u4'], downvotes: [],
     createdAt: new Date(Date.now() - 20 * 86400000).toISOString(),
-    assignedDepartment: 'BWSSB', adminNote: 'Pipe repaired and road restored.',
+    assignedDepartment: 'BWSSB', adminNote: 'Pipe repaired and road restored.', flagged: false,
   },
   {
     _id: '5', title: 'Drainage overflow — Jayanagar 4th Block',
@@ -53,7 +51,7 @@ const MOCK_ISSUES = [
     mediaUrls: ['https://picsum.photos/seed/drain5/600/400'],
     upvotes: ['u2','u5','u6'], downvotes: ['u7','u8','u9','u10','u11','u12','u13','u14','u15','u16'],
     createdAt: new Date(Date.now() - 1 * 86400000).toISOString(),
-    assignedDepartment: null, adminNote: null,
+    assignedDepartment: null, adminNote: null, flagged: false,
   },
   {
     _id: '6', title: 'Footpath blocked by construction debris — Whitefield',
@@ -63,53 +61,46 @@ const MOCK_ISSUES = [
     mediaUrls: [],
     upvotes: ['u1'], downvotes: [],
     createdAt: new Date(Date.now() - 3 * 86400000).toISOString(),
-    assignedDepartment: 'BBMP', adminNote: null,
+    assignedDepartment: 'BBMP', adminNote: null, flagged: false,
   },
 ];
 
-// ── HELPERS ─────────────────────────────────────────────────────────────────
+// Mutable in-memory store so mock updates/deletes persist during the session
+let mockStore = [...MOCK_ISSUES];
+
+// ── HELPERS ──────────────────────────────────────────────────────────────────
 const delay = (ms = 600) => new Promise((res) => setTimeout(res, ms));
 
-const getToken = () => localStorage.getItem('token');
+const getToken = () =>
+  localStorage.getItem('civicpulse_token') || localStorage.getItem('token');
 
 const headers = () => ({
   'Content-Type': 'application/json',
   ...(getToken() ? { Authorization: `Bearer ${getToken()}` } : {}),
 });
 
-// ── ISSUES ──────────────────────────────────────────────────────────────────
+export const USE_MOCK = true; // ← flip to false when backend is ready
 
-/**
- * Fetch issues with optional filters.
- * Switches to real API once backend is live — just set USE_MOCK = false.
- */
-const USE_MOCK = true; // ← flip to false when backend is ready
+// ── PUBLIC FEED ───────────────────────────────────────────────────────────────
 
 export const fetchIssues = async (params = {}, signal) => {
   if (USE_MOCK) {
     await delay();
-    let result = [...MOCK_ISSUES];
-
+    let result = [...mockStore];
     if (params.category && params.category !== 'all')
       result = result.filter((i) => i.category === params.category);
-
     if (params.status && params.status !== 'all')
       result = result.filter((i) => i.status === params.status);
-
     if (params.locality)
       result = result.filter((i) =>
         i.location.address.toLowerCase().includes(params.locality.toLowerCase())
       );
-
     if (params.sortBy === 'upvotes')
       result.sort((a, b) => b.upvotes.length - a.upvotes.length);
     else if (params.sortBy === 'newest')
       result.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-
     return result;
   }
-
-  // ── Real API ──
   const query = new URLSearchParams(
     Object.fromEntries(Object.entries(params).filter(([, v]) => v != null && v !== ''))
   ).toString();
@@ -118,24 +109,87 @@ export const fetchIssues = async (params = {}, signal) => {
   return res.json();
 };
 
-// ── VOTES ────────────────────────────────────────────────────────────────────
+// ── MY ISSUES ─────────────────────────────────────────────────────────────────
+
+export const fetchMyIssues = async () => {
+  if (USE_MOCK) {
+    await delay();
+    return mockStore.slice(0, 3);
+  }
+  const res = await fetch(`${BASE_URL}/issues/my`, { headers: headers() });
+  if (!res.ok) throw new Error('Failed to fetch your issues');
+  return res.json();
+};
+
+// ── ADMIN ISSUES ──────────────────────────────────────────────────────────────
+
+export const fetchAdminIssues = async (params = {}) => {
+  if (USE_MOCK) {
+    await delay();
+    let result = [...mockStore];
+    if (params.status && params.status !== 'all')
+      result = result.filter((i) => i.status === params.status);
+    return {
+      issues: result,
+      stats: {
+        open:       mockStore.filter((i) => i.status === 'open').length,
+        inProgress: mockStore.filter((i) => i.status === 'in-progress').length,
+        resolved:   mockStore.filter((i) => i.status === 'resolved').length,
+        flagged:    mockStore.filter((i) => i.flagged).length,
+      },
+    };
+  }
+  const query = new URLSearchParams(
+    Object.fromEntries(Object.entries(params).filter(([, v]) => v != null && v !== ''))
+  ).toString();
+  const res = await fetch(`${BASE_URL}/admin/issues?${query}`, { headers: headers() });
+  if (!res.ok) throw new Error('Failed to fetch admin issues');
+  return res.json();
+};
+
+export const updateAdminIssue = async (id, updates) => {
+  if (USE_MOCK) {
+    await delay(300);
+    mockStore = mockStore.map((i) => (i._id === id ? { ...i, ...updates } : i));
+    return { success: true };
+  }
+  const res = await fetch(`${BASE_URL}/admin/issues/${id}`, {
+    method: 'PATCH', headers: headers(),
+    body: JSON.stringify(updates),
+  });
+  if (!res.ok) throw new Error('Failed to update issue');
+  return res.json();
+};
+
+export const deleteAdminIssue = async (id) => {
+  if (USE_MOCK) {
+    await delay(300);
+    mockStore = mockStore.filter((i) => i._id !== id);
+    return { success: true };
+  }
+  const res = await fetch(`${BASE_URL}/admin/issues/${id}`, {
+    method: 'DELETE', headers: headers(),
+  });
+  if (!res.ok) throw new Error('Failed to delete issue');
+  return res.json();
+};
+
+// ── VOTES ─────────────────────────────────────────────────────────────────────
 
 export const voteOnIssue = async (issueId, type) => {
   if (USE_MOCK) {
     await delay(300);
-    return { success: true }; // optimistic update already done in useIssues hook
+    return { success: true };
   }
-
   const res = await fetch(`${BASE_URL}/issues/${issueId}/vote`, {
-    method: 'POST',
-    headers: headers(),
+    method: 'POST', headers: headers(),
     body: JSON.stringify({ type }),
   });
   if (!res.ok) throw new Error('Vote failed');
   return res.json();
 };
 
-// ── AUTH (Dev 1 will fill these in properly) ─────────────────────────────────
+// ── AUTH ──────────────────────────────────────────────────────────────────────
 
 export const loginUser = async (email, password, role) => {
   if (USE_MOCK) {
@@ -166,13 +220,16 @@ export const registerUser = async (data) => {
   return res.json();
 };
 
-// ── ISSUES CRUD (for ReportPage — Dev 1's territory but useful reference) ───
+// ── CREATE ISSUE ──────────────────────────────────────────────────────────────
 
 export const createIssue = async (formData) => {
-  if (USE_MOCK) { await delay(); return { ...MOCK_ISSUES[0], _id: 'new_' + Date.now() }; }
+  if (USE_MOCK) {
+    await delay();
+    return { ...MOCK_ISSUES[0], _id: 'new_' + Date.now() };
+  }
   const res = await fetch(`${BASE_URL}/issues`, {
     method: 'POST',
-    headers: { Authorization: `Bearer ${getToken()}` }, // no Content-Type → multipart
+    headers: { Authorization: `Bearer ${getToken()}` },
     body: formData,
   });
   if (!res.ok) throw new Error('Failed to create issue');
