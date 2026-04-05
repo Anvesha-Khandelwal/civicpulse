@@ -1,12 +1,8 @@
 // components/MapView.jsx
-// Dependencies: npm install react-leaflet leaflet leaflet.heat
-// In your index.html or main.jsx add: import 'leaflet/dist/leaflet.css';
-
 import { useEffect, useRef } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 
-// Fix default marker icon (Leaflet + Webpack issue)
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
@@ -21,76 +17,48 @@ const STATUS_COLORS = {
 };
 
 const CATEGORY_ICONS = {
-  Pothole: '🕳️', Streetlight: '💡', Garbage: '🗑️',
-  Water: '💧', Drainage: '🌊', Other: '⚠️',
+  pothole: '🕳️', streetlight: '💡', garbage: '🗑️',
+  waterlogging: '💧', fallen_tree: '🌳', stray_animals: '🐕', other: '⚠️',
 };
 
-// Creates a colored SVG pin marker
 const createMarker = (color, emoji) => {
   const svg = `
     <svg xmlns="http://www.w3.org/2000/svg" width="32" height="40" viewBox="0 0 32 40">
-      <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
-        <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="rgba(0,0,0,0.4)"/>
-      </filter>
-      <ellipse cx="16" cy="38" rx="6" ry="2.5" fill="rgba(0,0,0,0.25)"/>
-      <path d="M16 2C9.4 2 4 7.4 4 14c0 9 12 24 12 24s12-15 12-24c0-6.6-5.4-12-12-12z"
-            fill="${color}" filter="url(#shadow)"/>
+      <ellipse cx="16" cy="38" rx="6" ry="2.5" fill="rgba(0,0,0,0.15)"/>
+      <path d="M16 2C9.4 2 4 7.4 4 14c0 9 12 24 12 24s12-15 12-24c0-6.6-5.4-12-12-12z" fill="${color}"/>
       <circle cx="16" cy="14" r="7" fill="white" opacity="0.9"/>
       <text x="16" y="18" text-anchor="middle" font-size="9">${emoji}</text>
-    </svg>
-  `;
-  return L.divIcon({
-    html: svg,
-    iconSize: [32, 40],
-    iconAnchor: [16, 40],
-    popupAnchor: [0, -40],
-    className: '',
-  });
+    </svg>`;
+  return L.divIcon({ html: svg, iconSize: [32, 40], iconAnchor: [16, 40], popupAnchor: [0, -40], className: '' });
 };
 
-// Heatmap layer using leaflet.heat
 const HeatmapLayer = ({ issues }) => {
   const map = useMap();
   const heatRef = useRef(null);
-
   useEffect(() => {
-    if (typeof L.heatLayer !== 'function') return; // leaflet.heat not loaded
-
+    if (typeof L.heatLayer !== 'function') return;
     const points = issues
-      .filter((i) => i.location?.lat && i.location?.lng)
-      .map((i) => [
-        i.location.lat,
-        i.location.lng,
-        Math.min(1, (i.upvotes?.length || 0) / 20 + 0.3), // intensity
-      ]);
-
-    if (heatRef.current) {
-      map.removeLayer(heatRef.current);
-    }
+      .filter(i => i.location?.lat && i.location?.lng)
+      .map(i => [i.location.lat, i.location.lng, Math.min(1, (i.upvotes || 0) / 20 + 0.3)]);
+    if (heatRef.current) map.removeLayer(heatRef.current);
     heatRef.current = L.heatLayer(points, {
-      radius: 35,
-      blur: 20,
-      maxZoom: 14,
+      radius: 35, blur: 20, maxZoom: 14,
       gradient: { 0.2: '#3b82f6', 0.5: '#f59e0b', 0.8: '#ef4444' },
-    });
-    heatRef.current.addTo(map);
-
-    return () => {
-      if (heatRef.current) map.removeLayer(heatRef.current);
-    };
+    }).addTo(map);
+    return () => { if (heatRef.current) map.removeLayer(heatRef.current); };
   }, [issues, map]);
-
   return null;
 };
 
-// Auto-fit map bounds to markers
 const FitBounds = ({ issues }) => {
   const map = useMap();
   useEffect(() => {
-    const valid = issues.filter((i) => i.location?.lat && i.location?.lng);
-    if (valid.length === 0) return;
-    const bounds = L.latLngBounds(valid.map((i) => [i.location.lat, i.location.lng]));
-    map.fitBounds(bounds, { padding: [40, 40], maxZoom: 14 });
+    const valid = issues.filter(i => i.location?.lat && i.location?.lng);
+    if (!valid.length) return;
+    map.fitBounds(
+      L.latLngBounds(valid.map(i => [i.location.lat, i.location.lng])),
+      { padding: [40, 40], maxZoom: 14 }
+    );
   }, [issues, map]);
   return null;
 };
@@ -150,31 +118,31 @@ const MapView = ({ issues, onIssueClick, showHeatmap = false }) => {
                     </span>
                   </div>
                 </div>
-              </Popup>
-            </Marker>
-          );
-        })}
-      </MapContainer>
+              </div>
+            </Popup>
+          </Marker>
+        );
+      })}
+    </MapContainer>
 
-      {/* Legend */}
-      <div className="absolute bottom-4 left-4 z-[1000] bg-[#0D1117]/90 border border-white/10 rounded-xl p-3 space-y-1.5 backdrop-blur-sm">
-        <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-2">Status</p>
-        {Object.entries(STATUS_COLORS).map(([status, color]) => (
-          <div key={status} className="flex items-center gap-2">
-            <div className="w-2.5 h-2.5 rounded-full" style={{ background: color }} />
-            <span className="text-[10px] text-slate-400 capitalize">{status.replace('-', ' ')}</span>
-          </div>
-        ))}
-      </div>
-
-      {/* Issue count badge */}
-      <div className="absolute top-4 right-4 z-[1000] bg-[#0D1117]/90 border border-white/10 rounded-xl px-3 py-2 backdrop-blur-sm">
-        <span className="text-xs font-semibold text-slate-300">
-          {issues.filter((i) => i.location?.lat).length} mapped
-        </span>
-      </div>
+    {/* Legend */}
+    <div className="absolute bottom-4 left-4 z-[1000] bg-white/95 border border-slate-200 rounded-xl p-3 space-y-1.5 shadow-md">
+      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-2">Status</p>
+      {Object.entries(STATUS_COLORS).map(([s, color]) => (
+        <div key={s} className="flex items-center gap-2">
+          <div className="w-2.5 h-2.5 rounded-full" style={{ background: color }} />
+          <span className="text-[10px] text-slate-600 capitalize">{s.replace('-', ' ')}</span>
+        </div>
+      ))}
     </div>
-  );
-};
+
+    {/* Count badge */}
+    <div className="absolute top-4 right-4 z-[1000] bg-white/95 border border-slate-200 rounded-xl px-3 py-2 shadow-md">
+      <span className="text-xs font-semibold text-slate-600">
+        {issues.filter(i => i.location?.lat).length} mapped
+      </span>
+    </div>
+  </div>
+);
 
 export default MapView;
