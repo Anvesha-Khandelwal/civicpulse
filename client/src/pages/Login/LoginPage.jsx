@@ -25,24 +25,21 @@ const LoginPage = () => {
   };
 
   const handleSubmit = (e) => {
-  e.preventDefault();
-  setLoading(true);
-  const mockUser = {
-    id: '1',
-    name: formData.name || (activeTab === 'citizen' ? 'Arjun Sharma' : 'Dept. Officer'),
-    email: formData.emailOrPhone || formData.deptUsername,
-    role: activeTab,
-    ward: formData.ward || 'Ward 10',
-    city: formData.city || 'Bengaluru',
-    deptId: formData.deptId || null,
+    e.preventDefault();
+    setLoading(true);
+    const mockUser = {
+      id: '1',
+      name: formData.name || (activeTab === 'citizen' ? 'Arjun Sharma' : 'Dept. Officer'),
+      email: formData.emailOrPhone || formData.deptUsername,
+      role: activeTab,
+      ward: formData.ward || 'Ward 10',
+      city: formData.city || 'Bengaluru',
+      deptId: formData.deptId || null,
+    };
+    login(mockUser, 'mock-token-123');
+    setLoading(false);
+    navigate(activeTab === 'authority' ? '/admin' : '/explore');
   };
-  login(mockUser, 'mock-token-123');
-console.log('logged in', mockUser);
-console.log('user in storage', localStorage.getItem('civicpulse_user'));
-navigate(activeTab === 'authority' ? '/admin' : '/explore');
-  setLoading(false);
-  navigate(activeTab === 'authority' ? '/admin' : '/explore');
-};
   const handleGoogleLogin = () => {
     setLoading(true);
     setTimeout(() => {
