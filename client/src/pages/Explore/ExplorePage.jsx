@@ -7,6 +7,8 @@ import useIssues from '../../hooks/useIssues';
 import { AuthContext } from '../../context/AuthContext';
 import IssueDetailModal from '../../components/IssueDetailModal';
 import MapView from '../../components/MapView';
+import FilterBar from '../../components/FilterBar';
+import IssueCard from '../../components/IssueCard';
 
 const TABS = [
   { id: 'feed', label: 'Feed',    icon: '▦'  },

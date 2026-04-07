@@ -118,7 +118,6 @@ const MapView = ({ issues, onIssueClick, showHeatmap = false }) => {
                     </span>
                   </div>
                 </div>
-              </div>
             </Popup>
           </Marker>
         );
@@ -144,5 +143,6 @@ const MapView = ({ issues, onIssueClick, showHeatmap = false }) => {
     </div>
   </div>
 );
+};
 
 export default MapView;

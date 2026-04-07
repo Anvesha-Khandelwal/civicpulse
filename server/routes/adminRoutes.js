@@ -1,6 +1,6 @@
 const express = require('express');
 const router  = express.Router();
-const { protect, authorityOnly } = require('../middlewares/auth');
+const { protect, authorityOnly } = require('../midddlewares/auth');
 const { getDepartmentIssues, updateIssue, removeIssue } = require('../controllers/adminController');
 
 router.use(protect, authorityOnly);

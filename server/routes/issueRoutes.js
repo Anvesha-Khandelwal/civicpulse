@@ -1,7 +1,7 @@
 const express = require('express');
 const router  = express.Router();
 const multer  = require('multer');
-const { protect } = require('../middlewares/auth');
+const { protect } = require('../midddlewares/auth');
 const {
   getIssues, getIssueById, createIssue, voteIssue, getMyIssues,
 } = require('../controllers/issueController');
